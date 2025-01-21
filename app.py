@@ -166,6 +166,7 @@ st.markdown("""
         padding: 1.5rem 2rem;
         background-color: #1A1A1A;
         border-top: 1px solid #2D2D2D;
+        z-index: 1000;
     }
     
     .input-group {
@@ -186,12 +187,19 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        color: #808080;
+        transition: background-color 0.2s;
+    }
+    
+    .input-button:hover {
+        background-color: #363636;
     }
     
     .send-button {
         background-color: #0D6EFD;
-        color: white;
+    }
+    
+    .send-button:hover {
+        background-color: #0B5ED7;
     }
     
     .message-input {
@@ -202,6 +210,11 @@ st.markdown("""
         padding: 0.8rem 1rem;
         color: white;
         font-size: 16px;
+    }
+    
+    .message-input:focus {
+        outline: none;
+        background-color: #363636;
     }
     
     /* Welcome message styling */
@@ -237,29 +250,27 @@ st.markdown("""
         left: 50%;
         transform: translateX(-50%);
         background-color: #2D2D2D;
-        padding: 1rem;
-        border-radius: 8px;
+        padding: 1.5rem;
+        border-radius: 12px;
         z-index: 1000;
         width: 90%;
         max-width: 600px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
-    .stFileUploader {
+    .upload-container .stFileUploader {
         margin-bottom: 0 !important;
     }
     
-    .uploadButton:hover {
+    /* Customize Streamlit's file uploader */
+    .stFileUploader > div {
+        background-color: #363636 !important;
+        border: 2px dashed #4A4A4A !important;
+        padding: 1rem !important;
+    }
+    
+    .stFileUploader > div:hover {
         border-color: #0D6EFD !important;
-    }
-    
-    /* Hide the attachment button */
-    [data-testid="stButton"] {
-        display: none;
-    }
-    
-    /* Show the custom attachment button */
-    .input-button {
-        display: flex;
     }
     
     /* Code response styling */
@@ -359,30 +370,48 @@ if st.session_state.show_uploader:
         handle_file_upload()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Update the input container HTML to include click handler for attachment button
+# Add this JavaScript to handle button clicks
+st.markdown("""
+<script>
+    function toggleUploader() {
+        // Get the current state from sessionStorage
+        const currentState = sessionStorage.getItem('uploaderVisible') === 'true';
+        // Toggle the state
+        const newState = !currentState;
+        // Save the new state
+        sessionStorage.setItem('uploaderVisible', newState);
+        // Update the Python state through Streamlit
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: newState
+        }, '*');
+    }
+</script>
+""", unsafe_allow_html=True)
+
+# Update the input container HTML
 st.markdown("""
 <div class="input-container">
     <div class="input-group">
-        <button class="input-button" onclick="toggleUploader()">📎</button>
-        <button class="input-button">🎤</button>
+        <button class="input-button attachment-button" onclick="toggleUploader()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21.44 11.05l-9.19 9.19a6.003 6.003 0 01-8.49-8.49l9.19-9.19a4.002 4.002 0 015.66 5.66l-9.2 9.19a2.001 2.001 0 01-2.83-2.83l8.49-8.48" stroke="#808080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <button class="input-button microphone-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="#808080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" stroke="#808080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
         <input type="text" class="message-input" placeholder="Type your message...">
-        <button class="input-button send-button">➤</button>
+        <button class="input-button send-button">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
     </div>
 </div>
-""", unsafe_allow_html=True)
-
-# Add JavaScript to handle the attachment button click
-st.markdown("""
-<script>
-function toggleUploader() {
-    // Toggle the uploader state
-    const value = true;  // We'll handle the toggle in Python
-    window.parent.postMessage({
-        type: 'streamlit:setComponentValue',
-        value: value
-    }, '*');
-}
-</script>
 """, unsafe_allow_html=True)
 
 # Display chat messages and handle input
@@ -483,3 +512,7 @@ if prompt := st.chat_input("Type your message..."):
             if response["sample_io"].get("output"):
                 st.write("Sample Output:")
                 st.code(response["sample_io"]["output"], language=response["programming_language"])
+
+# Add a hidden button to handle the state
+if st.button("Toggle Uploader", key="toggle_uploader", help="Hidden button to handle uploader state"):
+    st.session_state.show_uploader = not st.session_state.show_uploader
